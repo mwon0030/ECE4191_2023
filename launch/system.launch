@@ -1,0 +1,7 @@
+<launch>
+    <node pkg="ece4191" name="motor_control"
+    type="motor_control.py" output="screen" respawn="true" />
+
+    <node pkg="ece4191" name="distance_sensor_cluster"
+    type="distance_sensor_cluster.py" output="screen" respawn="true" />
+</launch>
