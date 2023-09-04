@@ -9,7 +9,7 @@ class Localisation():
   def __init__(self):
     self.length = 25 # in cm
     self.width = 21
-    self.max_arena_size = 120
+    self.max_arena_size = [110, 120] # arena dimensions based on home arena 
     self.wheel_rad = 2.714
     self.wheel_circum = 2 * np.pi * self.wheel_rad
     self.wheel_width = 21.5 # the distance between the left and right wheels
@@ -22,7 +22,7 @@ class Localisation():
     self.right_motor_speed = 0
     self.x = 0
     self.y = 0
-    self.th = 0
+    self.th = np.pi/2
     self.turning = False
     self.send_msg = Float32MultiArray()
     
@@ -61,12 +61,13 @@ class Localisation():
   
   def init_localise(self):
     for _ in range(10):
-      self.x = ((self.left_dist + self.width/2) + (self.max_arena_size - self.right_dist - self.width/2))/2
-      self.y = ((self.max_arena_size - self.front_left_dist - self.length/2) + (self.max_arena_size - self.front_right_dist - self.length/2))/2
-      print('x: ', self.x, '   y: ', self.y)
+      self.x = ((self.left_dist + self.width/2) + (self.max_arena_size[0] - self.right_dist - self.width/2))/2
+      self.y = ((self.max_arena_size[1] - self.front_left_dist - self.length/2) + (self.max_arena_size[1] - self.front_right_dist - self.length/2))/2
+      # print('x: ', self.x, '   y: ', self.y)
       rospy.sleep(0.025)
     self.send_msg.data = [self.x, self.y, self.th]
     self.state_pub.publish(self.send_msg)
+    print("Robot Localised")
     self.prev_time = time.time()
   
   def localise_motor(self): # Localisation relying only on motors
@@ -75,7 +76,8 @@ class Localisation():
     self.x = self.x + ((self.left_motor_speed * self.wheel_circum * self.time - self.right_motor_speed * self.wheel_circum * self.time)/2) * np.sin(self.th)
     self.y = self.y + ((self.left_motor_speed * self.wheel_circum * self.time - self.right_motor_speed * self.wheel_circum * self.time)/2) * np.cos(self.th)
     self.prev_time = time.time()
-    print('x: ', self.x, '   y: ', self.y, '     th: ', self.th, '     time: ', self.time)
+    # print('x: ', self.x, '   y: ', self.y, '     th: ', self.th, '     time: ', self.time)
+    print("5")
     self.send_msg.data = [self.x, self.y, self.th]
     self.state_pub.publish(self.send_msg)
     rospy.sleep(0.07)
@@ -83,20 +85,24 @@ class Localisation():
   def localise_sensor(self): # Localisation relying on sensors for x,y and motors for theta
     self.time = time.time() - self.prev_time
     if (self.th >= -np.pi/6 and self.th <= np.pi/6): # When theta is 0
-      self.x = ((self.left_dist + self.width/2) + (self.max_arena_size - self.right_dist - self.width/2))/2
-      self.y = ((self.max_arena_size - self.front_left_dist - self.length/2) + (self.max_arena_size - self.front_right_dist - self.length/2))/2
+      print("1")
+      self.x = ((self.max_arena_size[0] - self.front_left_dist - self.length/2) + (self.max_arena_size[0] - self.front_right_dist - self.length/2))/2
+      self.y = ((self.max_arena_size[1] - self.left_dist - self.width/2) + (self.right_dist + self.width/2))/2
 
     elif (self.th >= (5/6) * np.pi) or (self.th <= (-5/6) * np.pi): # When theta is pi or -pi
-      self.x = ((self.max_arena_size - self.left_dist - self.width/2) + (self.right_dist + self.width/2))/2
-      self.y = ((self.front_left_dist + self.length/2) + (self.front_right_dist + self.length/2))/2
-
-    elif (self.th >= np.pi/3 and self.th <= (2/3) * np.pi):
+      print("2")
       self.x = ((self.front_left_dist + self.length/2) + (self.front_right_dist + self.length/2))/2
-      self.y = ((self.left_dist + self.width/2) + (self.max_arena_size - self.right_dist - self.width/2))/2
+      self.y = ((self.left_dist + self.width/2) + (self.max_arena_size[1] - self.right_dist - self.width/2))/2
+
+    elif (self.th >= np.pi/3 and self.th <= (2/3) * np.pi): # When theta is pi/2
+      print("3")
+      self.x = ((self.left_dist + self.width/2) + (self.max_arena_size[0] - self.right_dist - self.width/2))/2
+      self.y = ((self.max_arena_size[1] - self.front_left_dist - self.length/2) + (self.max_arena_size[1] - self.front_right_dist - self.length/2))/2
       
-    elif (self.th >= (-2/3) * np.pi and self.th <= (-1/3) * np.pi):
-      self.x = ((self.max_arena_size - self.front_left_dist - self.length/2) + (self.max_arena_size - self.front_right_dist - self.length/2))/2
-      self.y = ((self.left_dist + self.width/2) + (self.max_arena_size - self.right_dist - self.width/2))/2
+    elif (self.th >= (-2/3) * np.pi and self.th <= (-1/3) * np.pi): # When theta is -pi/2
+      print("4")
+      self.x = ((self.max_arena_size[0] - self.left_dist - self.width/2) + (self.right_dist + self.width/2))/2
+      self.y = ((self.front_left_dist + self.length/2) + (self.front_right_dist + self.length/2))/2
       
     # print('x: ', self.x, '   y: ', self.y)
     self.th = self.th + (-(self.left_motor_speed * self.wheel_circum * self.time + self.right_motor_speed * self.wheel_circum * self.time))/self.wheel_width
@@ -118,7 +124,7 @@ class Localisation():
 
 if __name__ == '__main__':
   rospy.init_node('localisation')
-  rospy.sleep(5)
+  rospy.sleep(3)
   localiser = Localisation()
   
   try:
