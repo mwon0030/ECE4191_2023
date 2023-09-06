@@ -76,8 +76,10 @@ class Localisation():
     self.x = self.x + ((self.left_motor_speed * self.wheel_circum * self.time - self.right_motor_speed * self.wheel_circum * self.time)/2) * np.sin(self.th)
     self.y = self.y + ((self.left_motor_speed * self.wheel_circum * self.time - self.right_motor_speed * self.wheel_circum * self.time)/2) * np.cos(self.th)
     self.prev_time = time.time()
-    # print('x: ', self.x, '   y: ', self.y, '     th: ', self.th, '     time: ', self.time)
-    print("5")
+    print('x: ', self.x, '   y: ', self.y, '     th: ', self.th, '     time: ', self.time)
+    # print("5")
+    # print('left speed: ', self.left_motor_speed, '    right speed: ', self.right_motor_speed, '      time: ', self.time)
+    self.th = self.clamp_angle(self.th)
     self.send_msg.data = [self.x, self.y, self.th]
     self.state_pub.publish(self.send_msg)
     rospy.sleep(0.07)
@@ -85,24 +87,26 @@ class Localisation():
   def localise_sensor(self): # Localisation relying on sensors for x,y and motors for theta
     self.time = time.time() - self.prev_time
     if (self.th >= -np.pi/6 and self.th <= np.pi/6): # When theta is 0
-      print("1")
+      # print('1')
       self.x = ((self.max_arena_size[0] - self.front_left_dist - self.length/2) + (self.max_arena_size[0] - self.front_right_dist - self.length/2))/2
       self.y = ((self.max_arena_size[1] - self.left_dist - self.width/2) + (self.right_dist + self.width/2))/2
 
     elif (self.th >= (5/6) * np.pi) or (self.th <= (-5/6) * np.pi): # When theta is pi or -pi
-      print("2")
+      # print("2")
       self.x = ((self.front_left_dist + self.length/2) + (self.front_right_dist + self.length/2))/2
       self.y = ((self.left_dist + self.width/2) + (self.max_arena_size[1] - self.right_dist - self.width/2))/2
 
     elif (self.th >= np.pi/3 and self.th <= (2/3) * np.pi): # When theta is pi/2
-      print("3")
+      # print("3")
       self.x = ((self.left_dist + self.width/2) + (self.max_arena_size[0] - self.right_dist - self.width/2))/2
       self.y = ((self.max_arena_size[1] - self.front_left_dist - self.length/2) + (self.max_arena_size[1] - self.front_right_dist - self.length/2))/2
       
     elif (self.th >= (-2/3) * np.pi and self.th <= (-1/3) * np.pi): # When theta is -pi/2
-      print("4")
+      # print("4")
       self.x = ((self.max_arena_size[0] - self.left_dist - self.width/2) + (self.right_dist + self.width/2))/2
       self.y = ((self.front_left_dist + self.length/2) + (self.front_right_dist + self.length/2))/2
+    print('\n', 'front left: ', self.front_left_dist, '    front right: ', self.front_right_dist, '    left: ', self.left_dist, '    right: ', self.right_dist)
+    print('x: ', self.x, '   y: ', self.y, '     th: ', self.th, '     time: ', self.time)
       
     # print('x: ', self.x, '   y: ', self.y)
     self.th = self.th + (-(self.left_motor_speed * self.wheel_circum * self.time + self.right_motor_speed * self.wheel_circum * self.time))/self.wheel_width
@@ -110,7 +114,7 @@ class Localisation():
     self.prev_time = time.time()
     self.send_msg.data = [self.x, self.y, self.th]
     self.state_pub.publish(self.send_msg)
-    rospy.sleep(0.025)
+    rospy.sleep(0.05)
   
   def is_turning(self):
     turn = self.turning
@@ -124,7 +128,7 @@ class Localisation():
 
 if __name__ == '__main__':
   rospy.init_node('localisation')
-  rospy.sleep(3)
+  rospy.sleep(1)
   localiser = Localisation()
   
   try:
@@ -134,6 +138,7 @@ if __name__ == '__main__':
   
   while not rospy.is_shutdown():
     turning = localiser.is_turning()
+    # print('\nTurning: ', turning)
     if turning:
       localiser.localise_motor()
     elif not turning:

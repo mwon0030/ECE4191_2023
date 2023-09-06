@@ -14,8 +14,10 @@ class MotorControl:
         self.motor_EN = DigitalOutputDevice(pin = pin_EN)
 
         # self.encoder = Encoder(pin_encoder_A, pin_encoder_B, encoder_name)
+        
+        self.encoder_name = encoder_name
 
-        self.pi_controller = PIController(speed_control_kp, speed_control_ki)
+        self.pi_controller = PIController(speed_control_kp, speed_control_ki, 1, 0)
         
         self.encoder_sub = rospy.Subscriber('/' + encoder_name, Float32, self.motor_cb)
         self.set_motor_speed_sub = rospy.Subscriber('/set_' + encoder_name + '_speed', Float32, self.set_motor_speed_cb)
@@ -37,6 +39,7 @@ class MotorControl:
 
     def set_motor_speed(self):
         current_motor_speed = self.motor_speed
+        # print('ref motor speed: ', self.ref_motor_speed, '    motor: ', self.encoder_name)
         if self.ref_motor_speed > 0: 
             self.motor_PWM1.value = self.pi_controller.update(self.ref_motor_speed, current_motor_speed)
             self.motor_PWM2.value = 0
