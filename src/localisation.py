@@ -35,6 +35,7 @@ class Localisation():
     self.left_motor_sub = rospy.Subscriber('/left_motor', Float32, self.left_motor_cb)
     self.right_motor_sub = rospy.Subscriber('/right_motor', Float32, self.right_motor_cb)
     self.turning_sub = rospy.Subscriber('/turning', Bool, self.turning_cb)
+    # self.obstacle_detection_sub = rospy.Subscriber('/')
     
     self.prev_time = time.time()
   
@@ -73,8 +74,8 @@ class Localisation():
   def localise_motor(self): # Localisation relying only on motors
     self.time = time.time() - self.prev_time
     self.th = self.th + (-(self.left_motor_speed * self.wheel_circum * self.time + self.right_motor_speed * self.wheel_circum * self.time))/self.wheel_width
-    self.x = self.x + ((self.left_motor_speed * self.wheel_circum * self.time - self.right_motor_speed * self.wheel_circum * self.time)/2) * np.sin(self.th)
-    self.y = self.y + ((self.left_motor_speed * self.wheel_circum * self.time - self.right_motor_speed * self.wheel_circum * self.time)/2) * np.cos(self.th)
+    self.x = self.x + ((self.left_motor_speed * self.wheel_circum * self.time - self.right_motor_speed * self.wheel_circum * self.time)/2) * np.cos(self.th)
+    self.y = self.y + ((self.left_motor_speed * self.wheel_circum * self.time - self.right_motor_speed * self.wheel_circum * self.time)/2) * np.sin(self.th)
     self.prev_time = time.time()
     print('x: ', self.x, '   y: ', self.y, '     th: ', self.th, '     time: ', self.time)
     # print("5")
@@ -137,10 +138,10 @@ if __name__ == '__main__':
     quit()
   
   while not rospy.is_shutdown():
-    turning = localiser.is_turning()
-    # print('\nTurning: ', turning)
-    if turning:
-      localiser.localise_motor()
-    elif not turning:
-      localiser.localise_sensor()
-      
+    # turning = localiser.is_turning()
+    # # print('\nTurning: ', turning)
+    # if turning:
+    #   localiser.localise_motor()
+    # elif not turning:
+    #   localiser.localise_sensor()
+    localiser.localise_motor()  

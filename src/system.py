@@ -22,9 +22,10 @@ class System():
     self.is_turning = False
     self.flag_0 = 0
     self.flag_1 = 0
+    self.obstacle_detected = False
     
     # self.Kp = 0.3
-    self.dist_threshold = 9
+    self.dist_threshold = 3
     self.angle_threshold = np.pi/22
     self.candidate_angles = [-np.pi, -np.pi/2, 0, np.pi/2, np.pi]
     
@@ -35,6 +36,7 @@ class System():
     self.left_motor = rospy.Subscriber('/left_motor', Float32, self.left_motor_cb)
     self.right_motor = rospy.Subscriber('/right_motor', Float32, self.right_motor_cb)
     self.th = rospy.Subscriber('/state', Float32MultiArray, self.state_cb)
+    self.obstacle_detector = rospy.Subscriber('/obstacle_detect', Bool, self.obstacle_detect_cb)
     
     self.turning_pub = rospy.Publisher('turning', Bool, queue_size=1)
     self.set_left_motor_speed_pub = rospy.Publisher('set_left_motor_speed', Float32, queue_size=1)
@@ -64,6 +66,9 @@ class System():
     self.y = data.data[1]
     self.th = data.data[2]
 
+  def obstacle_detect_cb(self, data): 
+    self.obstacle_detected = data.data
+
   def drive(self):
     # self.set_left_motor_speed_pub.publish(self.Kp * dist_error)
     # self.set_right_motor_speed_pub.publish(self.Kp * dist_error)
@@ -74,9 +79,7 @@ class System():
   def turn(self, goal_angle):
     self.is_turning = True
     self.turning_pub.publish(self.is_turning)
-    angle_error = self.angle_from_goal(goal_location)
     # print('angle error: ', angle_error)
-    goal_angle = angle_error + self.th
     # print('goal angle: ', goal_angle)
     diff = abs(goal_angle - self.th)
     # print('diff: ', diff)
@@ -94,7 +97,7 @@ class System():
         self.set_right_motor_speed_pub.publish(motor_speed_control_signal)
         # print('motor control signal: ', motor_speed_control_signal)
 
-      angle_error = self.angle_from_goal(goal_location)
+      # angle_error = self.angle_from_goal(goal_location)
       diff = abs(goal_angle - self.th)
       # print('angle: ', self.th)
       # print('angle error: ', angle_error)
@@ -125,36 +128,151 @@ class System():
     angle = (rad_angle + max_value) % (2 * np.pi) + min_value
     return angle
   
-  def path_planning(self, goal_location):
-    tot_error = self.distance_from_goal(goal_location)
-    if tot_error >= 5:
-      diff_angles = [abs(angle - self.th) for angle in self.candidate_angles]
-      candidate_angle_idx = diff_angles.index(min(diff_angles))
-      if candidate_angle_idx % 2:
-        x_error = abs(goal_location[0] - self.x)
-        y_error = abs(goal_location[1] - self.y)
-        print('y error: ', y_error)
-        if y_error >= self.dist_threshold:
-          self.drive()
+  def path_planning(self, goal_locations):
+    for point in goal_locations:
+      if not self.obstacle_detected:
+        tot_error = self.distance_from_goal(point)
+        while tot_error >= 5:
+          x_error = abs(goal_location[0] - self.x)
+          y_error = abs(goal_location[1] - self.y)
           
-        elif x_error >= self.dist_threshold:
-          self.turn(goal_location)
-          # self.adjust()
-      else:
-        x_error = abs(goal_location[0] - self.x)
-        print('x error: ', x_error)
-        y_error = abs(goal_location[1] - self.y)
-        if x_error >= self.dist_threshold:
-          self.drive()
+          if x_error >= self.dist_threshold and y_error > self.dist_threshold:
+            self.dist_threshold = 9
+          else:
+            self.dist_threshold = 3
           
-        elif y_error >= self.dist_threshold:
-          self.turn(goal_location)
-    else:
+          if x_error >= self.dist_threshold:
+            angle_error = self.angle_from_goal(goal_location)
+            if angle_error >= self.angle_threshold:
+              goal_angle = angle_error + self.th
+              self.turn(goal_angle)
+            else:
+              self.drive()
+              
+          elif y_error >= self.dist_threshold:
+            angle_error = self.angle_from_goal(goal_location)
+            if angle_error >= self.angle_threshold:
+              goal_angle = angle_error + self.th
+              self.turn(goal_angle)
+            else:
+              self.drive()
+            
+        tot_error = self.distance_from_goal(point)
+      
+      else: 
+        if self.left_sensor_dist > self.right_sensor_dist: 
+           # turn left
+          if (self.th >= (5/6) * np.pi): # When theta is pi 
+            self.turn(-np.pi/2) 
+          else: 
+            self.turn(self.th + np.pi/2)
+
+          # look in the right direction and travel forward until it becomes clear 
+          while self.right_sensor_dist < self.x: 
+            self.drive()
+          
+          # when clear turn back perform right turn 
+          if (self.th <= (-5/6) * np.pi): # When theta is -pi
+            self.turn(-np.pi/2)
+          else:
+            self.turn(self.th - np.pi/2)
+
+          # self.th left_angle right_angle 
+          # 90 180 0 
+          # 0 90 -90
+          # 180 -90 90 
+          # -180 -0 90 
+          # -90 0 -180
+
+        else: 
+          # turn right 
+          if (self.th <= (-5/6) * np.pi): # When theta is -pi
+            self.turn(-np.pi/2)
+          else:
+            self.turn(self.th - np.pi/2)
+
+          # look in the right direction and travel forward until it becomes clear 
+          while self.left_sensor_dist < self.x: 
+            self.drive()
+          
+          # when clear turn back perform left turn 
+          if (self.th >= (5/6) * np.pi): # When theta is pi 
+            self.turn(-np.pi/2) 
+          else: 
+            self.turn(self.th + np.pi/2)
+
       self.set_left_motor_speed_pub.publish(0)
       self.set_right_motor_speed_pub.publish(0)
       print("Goal reached!")
       rospy.sleep(10)
-      
+
+  def path_planning_1(self, goal_location): 
+    tot_error = self.distance_from_goal(goal_location)
+    while tot_error >= 5:
+      if not self.obstacle_detected:
+        diff_angles = [abs(angle - self.th) for angle in self.candidate_angles]
+        candidate_angle_idx = diff_angles.index(min(diff_angles))
+        if candidate_angle_idx % 2:
+          x_error = abs(goal_location[0] - self.x)
+          y_error = abs(goal_location[1] - self.y)
+          print('y error: ', y_error)
+          if y_error >= self.dist_threshold:
+            self.drive()
+            
+          elif x_error >= self.dist_threshold:
+            self.turn(goal_location)
+            # self.adjust()
+        else:
+          x_error = abs(goal_location[0] - self.x)
+          print('x error: ', x_error)
+          y_error = abs(goal_location[1] - self.y)
+          if x_error >= self.dist_threshold:
+            self.drive()
+            
+          elif y_error >= self.dist_threshold:
+            self.turn(goal_location)
+
+      else: 
+        if self.left_sensor_dist > self.right_sensor_dist: # turn left 
+
+          if (self.th >= (5/6) * np.pi): # When theta is pi 
+            self.turn(-np.pi/2) 
+          else: 
+            self.turn(self.th + np.pi/2)
+
+          # look in the right direction and travel forward until it becomes clear 
+          while self.right_sensor_dist < self.x: 
+            self.drive()
+          
+          # when clear turn back perform right turn 
+          if (self.th <= (-5/6) * np.pi): # When theta is -pi
+            self.turn(-np.pi/2)
+          else:
+            self.turn(self.th - np.pi/2)
+
+          # self.th left_angle right_angle 
+          # 90 180 0 
+          # 0 90 -90
+          # 180 -90 90 
+          # -180 -0 90 
+          # -90 0 -180
+
+        else: # turn right 
+          if (self.th <= (-5/6) * np.pi): # When theta is -pi
+            self.turn(-np.pi/2)
+          else:
+            self.turn(self.th - np.pi/2)
+
+          # look in the right direction and travel forward until it becomes clear 
+          while self.left_sensor_dist < self.x: 
+            self.drive()
+          
+          # when clear turn back perform left turn 
+          if (self.th >= (5/6) * np.pi): # When theta is pi 
+            self.turn(-np.pi/2) 
+          else: 
+            self.turn(self.th + np.pi/2)
+
   
     
 if __name__ == "__main__":

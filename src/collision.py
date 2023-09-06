@@ -51,19 +51,29 @@ class Collision():
       self.obstacle_flag = True
       self.obstacle_detect_pub.publish(self.obstacle_flag)
     
-    elif self.check_arena_size1 <= self.arena_size[0] - self.threshold or self.check_arena_size1 >= self.arena_size[0] + self.threshold: # Check if there is an obstacle within the sights of the sensor, assuming the obstacle is perpendicular to the sensor
+    # check collision that is flat 
+    elif self.check_arena_size1 <= self.arena_size[0] - self.threshold: 
       self.obstacle_flag = True
       self.obstacle_detect_pub.publish(self.obstacle_flag)
     
+    # diagonal obstacle
+    elif self.check_arena_size1 >= self.arena_size[0] + self.threshold: 
+      self.obstacle_flag = True
+      self.obstacle_detect_pub.publish(self.obstacle_flag)
+
     else:
       self.obstacle_flag = False
       self.obstacle_detect_pub.publish(self.obstacle_flag)
       
-
     # elif self.check_arena_size2 <= self.arena_size[0] - self.threshold:
     #   self.obstacle_detect_pub.publish(True)
     
-  def obstacle_avoidance(self):
-    return
-      
-    
+if __name__ == "__main__":
+  rospy.init_node('objection_detection')
+  obstacle_detection = Collision()
+  
+  while not rospy.is_shutdown():
+    try:
+      obstacle_detection.obstacle_detect()
+    except rospy.ROSInterruptException:
+      break
