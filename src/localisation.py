@@ -10,9 +10,10 @@ class Localisation():
     self.length = 25 # in cm
     self.width = 21
     self.max_arena_size = [117, 120] # arena dimensions based on home arena 
-    self.wheel_rad = 2.714
+    self.wheel_rad = 2.71
     self.wheel_circum = 2 * np.pi * self.wheel_rad
-    self.wheel_width = 23.5 # the distance between the left and right wheels
+    self.wheel_width = 21.6 # the distance between the left and right wheels
+    self.calibration_factor = 1
     
     self.front_left_dist = 200
     self.front_right_dist = 200
@@ -73,6 +74,20 @@ class Localisation():
     self.prev_time = time.time()
   
   def localise_motor(self): # Localisation relying only on motors
+    self.time = time.time() - self.prev_time
+    self.th = self.th + (-(self.left_motor_speed * self.wheel_circum * self.time + self.right_motor_speed * self.wheel_circum * self.time))/self.wheel_width
+    self.x = self.x + ((self.left_motor_speed * self.wheel_circum * self.time - self.right_motor_speed * self.wheel_circum * self.time)/2) * self.calibration_factor * np.cos(self.th)
+    self.y = self.y + ((self.left_motor_speed * self.wheel_circum * self.time - self.right_motor_speed * self.wheel_circum * self.time)/2) *  self.calibration_factor * np.sin(self.th)
+    self.prev_time = time.time()
+    print('x: ', self.x, '   y: ', self.y, '     th: ', self.th, '     time: ', time.time())
+    # print("5")
+    # print('left speed: ', self.left_motor_speed, '    right speed: ', self.right_motor_speed, '      time: ', self.time)
+    # self.th = self.clamp_angle(self.th)
+    self.send_msg.data = [self.x, self.y, self.th]
+    self.state_pub.publish(self.send_msg)
+    rospy.sleep(0.07)
+    
+  def localise_motor_turn(self): # Localisation relying only on motors
     self.time = time.time() - self.prev_time
     self.th = self.th + (-(self.left_motor_speed * self.wheel_circum * self.time + self.right_motor_speed * self.wheel_circum * self.time))/self.wheel_width
     self.x = self.x + ((self.left_motor_speed * self.wheel_circum * self.time - self.right_motor_speed * self.wheel_circum * self.time)/2) * np.cos(self.th)
@@ -139,10 +154,10 @@ if __name__ == '__main__':
   #   quit()
   
   while not rospy.is_shutdown():
-    # turning = localiser.is_turning()
-    # # print('\nTurning: ', turning)
-    # if turning:
-    #   localiser.localise_motor()
-    # elif not turning:
-    #   localiser.localise_sensor()
-    localiser.localise_motor()  
+    turning = localiser.is_turning()
+    # print('\nTurning: ', turning)
+    if turning:
+      localiser.localise_motor_turn()
+    elif not turning:
+      localiser.localise_motor()
+    # localiser.localise_motor()  

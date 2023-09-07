@@ -53,20 +53,19 @@ class MotorControl:
         #         self.motor_PWM1.value = 0
         #         self.motor_PWM2.value = 0
 
-        # print(f'Current Motor speed: {current_motor_speed} rev/s, Set Motor speed: {ref_motor_speed} rev/s')
-            sleep(0.07) 
+        # print(f'Current Motor speed: {current_motor_speed} rev/s, Set Motor speed: {ref_motor_speed} rev/s'
 
                  # print('ref motor speed: ', self.ref_motor_speed, '    motor: ', self.encoder_name)
             if self.ref_motor_speed > 0: 
                 self.motor_PWM1.value = self.ref_motor_speed
                 # self.motor_PWM1.value = self.pi_controller.update(self.ref_motor_speed, self.current_motor_speed)
-                print("ref motor speed: ", self.ref_motor_speed, "current motor speed: ", self.current_motor_speed)
+                # print("ref motor speed: ", self.ref_motor_speed, "current motor speed: ", self.motor_speed)
                 self.motor_PWM2.value = 0
             elif self.ref_motor_speed < 0: 
                 self.motor_PWM1.value = 0
                 self.motor_PWM2.value = -self.ref_motor_speed
                 # self.motor_PWM2.value = self.pi_controller.update(-self.ref_motor_speed, -self.current_motor_speed)
-                print("ref motor speed: ", self.ref_motor_speed, "current motor speed: ", self.current_motor_speed)
+                # print("ref motor speed: ", self.ref_motor_speed, "current motor speed: ", self.motor_speed)
                 
             else: 
                 self.motor_PWM1.value = 0

@@ -43,31 +43,36 @@ class Collision():
     self.back_dist = round(data.data, 4)
     
   def obstacle_detect(self):
-    self.check_sensor_diff = self.front_left_dist - self.front_right_dist
-    self.check_arena_size1 = (self.front_left_dist + self.front_right_dist)/2 + self.length + self.back_dist
-    # self.check_arena_size2 = self.left_dist + self.right_dist + self.width
+    # self.check_sensor_diff = self.front_left_dist - self.front_right_dist
+    # self.check_arena_size1 = (self.front_left_dist + self.front_right_dist)/2 + self.length + self.back_dist
+    # # self.check_arena_size2 = self.left_dist + self.right_dist + self.width
     
-    if self.check_sensor_diff >= 5: # Check if distance between two front sensors are not close to each other
-      self.obstacle_flag = True
-      self.obstacle_detect_pub.publish(self.obstacle_flag)
+    # if self.check_sensor_diff >= 5: # Check if distance between two front sensors are not close to each other
+    #   self.obstacle_flag = True
+    #   self.obstacle_detect_pub.publish(self.obstacle_flag)
     
-    # check collision that is flat 
-    elif self.check_arena_size1 <= self.arena_size[0] - self.threshold: 
-      self.obstacle_flag = True
-      self.obstacle_detect_pub.publish(self.obstacle_flag)
+    # # check collision that is flat 
+    # elif self.check_arena_size1 <= self.arena_size[0] - self.threshold: 
+    #   self.obstacle_flag = True
+    #   self.obstacle_detect_pub.publish(self.obstacle_flag)
     
-    # diagonal obstacle
-    elif self.check_arena_size1 >= self.arena_size[0] + self.threshold: 
-      self.obstacle_flag = True
-      self.obstacle_detect_pub.publish(self.obstacle_flag)
+    # # diagonal obstacle
+    # elif self.check_arena_size1 >= self.arena_size[0] + self.threshold: 
+    #   self.obstacle_flag = True
+    #   self.obstacle_detect_pub.publish(self.obstacle_flag)
 
-    else:
-      self.obstacle_flag = False
-      self.obstacle_detect_pub.publish(self.obstacle_flag)
+    # else:
+    #   self.obstacle_flag = False
+    #   self.obstacle_detect_pub.publish(self.obstacle_flag)
       
     # elif self.check_arena_size2 <= self.arena_size[0] - self.threshold:
     #   self.obstacle_detect_pub.publish(True)
-    
+
+    dist_threshold = 5
+    if self.front_left_dist < dist_threshold or self.front_right_dist < dist_threshold: 
+      self.obstacle_detect_pub.publish(True)
+
+
 if __name__ == "__main__":
   rospy.init_node('objection_detection')
   obstacle_detection = Collision()

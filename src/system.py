@@ -29,7 +29,7 @@ class System():
     
     self.Kp = 0.1
     self.dist_threshold = 3
-    self.angle_threshold = np.pi/90
+    self.angle_threshold = np.pi/120
     
     self.front_left_sensor = rospy.Subscriber('/distance_sensor_0', Float32, self.front_left_sensor_cb)
     self.front_right_sensor = rospy.Subscriber('/distance_sensor_1', Float32, self.front_right_sensor_cb)
@@ -75,6 +75,7 @@ class System():
     # self.set_left_motor_speed_pub.publish(self.Kp * dist_error)
     # self.set_right_motor_speed_pub.publish(-self.Kp * dist_error)
     distance_to_drive = self.distance_from_goal(goal)
+    
     while distance_to_drive >= self.dist_threshold:
       self.set_left_motor_speed_pub.publish(0.6)
       self.set_right_motor_speed_pub.publish(-0.6)
@@ -82,6 +83,10 @@ class System():
       # self.set_left_motor_speed_pub.publish(motor_signal)
       # self.set_right_motor_speed_pub.publish(-motor_signal)
       distance_to_drive = self.distance_from_goal(goal)
+    
+    while self.left_motor_speed != 0.0 and self.right_motor_speed != 0.0:
+      self.set_left_motor_speed_pub.publish(0)
+      self.set_right_motor_speed_pub.publish(0)
 
   def drive_forward(self):
       motor_signal = 0.4
@@ -119,6 +124,16 @@ class System():
       # angle_error = self.angle_from_goal(point)
       angle_error = abs(goal_angle - self.th)
       print("angle error: ", angle_error, "    goal_angle: ", goal_angle, "    th: ", self.th, "   left motor: ", self.left_motor_speed, '    right motor: ', self.right_motor_speed)
+      self.turning_pub.publish(self.is_turning)
+    
+    while self.left_motor_speed != 0.0 and self.right_motor_speed != 0.0:
+      self.set_left_motor_speed_pub.publish(0)
+      self.set_right_motor_speed_pub.publish(0)
+    
+    
+    print("Turn Complete")
+    rospy.sleep(3)
+
     # rospy.sleep(0.07)
       # print('angle: ', self.th)
       # print('angle error: ', angle_error)
@@ -151,6 +166,8 @@ class System():
     return angle
   
   def path_planning(self):
+    waypoints = [[90,50], [30,50]]
+
     for waypoint in self.goal_locations:
       # determines which relative direction to turn
       # do turn 
@@ -170,11 +187,15 @@ class System():
       
       # Stop when waypoint is reached
       self.set_left_motor_speed_pub.publish(0)
-      self.set_right_motor_speed_pub.publish(0)
-      print("Goal reached!")
-      rospy.sleep(10)
+      self.set_right_motor_speed_pub.publish(0) 
+
+      if not waypoint in waypoints: 
+        print("Goal reached!")
+        rospy.sleep(10)
   
   def obstacle_avoidance(self):
+    rospy.sleep(10)
+    print('obstacle detected')
     if self.left_sensor_dist > self.right_sensor_dist: 
         # turn left
       if (self.th >= (5/6) * np.pi): # When theta is pi 
@@ -220,7 +241,16 @@ class System():
     
 if __name__ == "__main__":
   rospy.init_node('system')
-  goal_locations = [[90, 80], [30, 80]]
+  goal_locations = [[90, 80], [90, 50], [30, 50], [30, 80]] 
+  goal_locations = [[90, 80],  [30, 80]]
   robot = System(goal_locations)
   rospy.sleep(1)
+  # robot.turn(-2*np.pi)
+  # robot.turn(np.pi/4)
+  # robot.turn(0)
+  # robot.turn(-np.pi/4)
+  # robot.turn(-2*np.pi)
+  # robot.turn(-3/2 * np.pi)
+  # robot.turn(-2*np.pi)
   robot.path_planning()
+  # robot.drive([30,80])
