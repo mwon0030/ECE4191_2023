@@ -10,4 +10,7 @@
 
     <node pkg="ece4191" name="localisation"
     type="localisation.py" output="screen" respawn="true" />
+
+    <node pkg="ece4191" name="collision"
+    type="collision.py" output="screen" respawn="true" />
 </launch>

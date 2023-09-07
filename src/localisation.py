@@ -9,7 +9,7 @@ class Localisation():
   def __init__(self):
     self.length = 25 # in cm
     self.width = 21
-    self.max_arena_size = [110, 120] # arena dimensions based on home arena 
+    self.max_arena_size = [117, 120] # arena dimensions based on home arena 
     self.wheel_rad = 2.714
     self.wheel_circum = 2 * np.pi * self.wheel_rad
     self.wheel_width = 21.5 # the distance between the left and right wheels
@@ -62,7 +62,8 @@ class Localisation():
   
   def init_localise(self):
     for _ in range(10):
-      self.x = ((self.left_dist + self.width/2) + (self.max_arena_size[0] - self.right_dist - self.width/2))/2
+      # self.x = ((self.left_dist + self.width/2) + (self.max_arena_size[0] - self.right_dist - self.width/2))/2
+      self.x = self.max_arena_size[0] - self.right_dist - self.width/2
       self.y = ((self.max_arena_size[1] - self.front_left_dist - self.length/2) + (self.max_arena_size[1] - self.front_right_dist - self.length/2))/2
       # print('x: ', self.x, '   y: ', self.y)
       rospy.sleep(0.025)
@@ -80,7 +81,7 @@ class Localisation():
     print('x: ', self.x, '   y: ', self.y, '     th: ', self.th, '     time: ', self.time)
     # print("5")
     # print('left speed: ', self.left_motor_speed, '    right speed: ', self.right_motor_speed, '      time: ', self.time)
-    self.th = self.clamp_angle(self.th)
+    # self.th = self.clamp_angle(self.th)
     self.send_msg.data = [self.x, self.y, self.th]
     self.state_pub.publish(self.send_msg)
     rospy.sleep(0.07)
