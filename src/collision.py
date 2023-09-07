@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 import rospy
-from std_msgs.msg import Float32, Bool
+from std_msgs.msg import Float32, Bool, Float32MultiArray
 
 class Collision():
   def __init__(self):
@@ -16,6 +16,11 @@ class Collision():
     self.length = 25
     self.width = 21
     self.obstacle_flag = False
+    self.near_wall = False
+    
+    self.x = 0
+    self.y = 0
+    self.th = 0
     
     # Publisher for obstacle detection
     self.obstacle_detect_pub = rospy.Publisher('obstacle_detect', Bool, queue_size=1)
@@ -26,6 +31,9 @@ class Collision():
     self.ds_left_sub = rospy.Subscriber('/ds_left', Float32, self.ds_left_cb)
     self.ds_right_sub = rospy.Subscriber('/ds_right', Float32, self.ds_right_cb)
     self.ds_back = rospy.Subscriber('/ds_back', Float32, self.ds_back_cb)
+    self.th = rospy.Subscriber('/state', Float32MultiArray, self.state_cb)
+
+    
     
   def ds_front_left_cb(self, data):
     self.front_left_dist = round(data.data, 4)
@@ -41,6 +49,12 @@ class Collision():
     
   def ds_back_cb(self, data):
     self.back_dist = round(data.data, 4)
+
+  def state_cb(self, data):
+    self.x = data.data[0]
+    self.y = data.data[1]
+    self.th = data.data[2]
+    
     
   def obstacle_detect(self):
     # self.check_sensor_diff = self.front_left_dist - self.front_right_dist
@@ -68,9 +82,21 @@ class Collision():
     # elif self.check_arena_size2 <= self.arena_size[0] - self.threshold:
     #   self.obstacle_detect_pub.publish(True)
 
-    dist_threshold = 5
-    if self.front_left_dist < dist_threshold or self.front_right_dist < dist_threshold: 
+    dist_threshold = 15
+
+    # near wall 
+    if self.x < 45 or self.x > 100: 
+      self.near_wall = True 
+    elif self.y < 20 or self.y > 100: 
+      self.near_wall = True 
+    else: 
+      self.near_wall = False
+
+    if (self.front_left_dist < dist_threshold or self.front_right_dist < dist_threshold) and not self.near_wall: 
       self.obstacle_detect_pub.publish(True)
+    else:
+      self.obstacle_detect_pub.publish(False)
+      
 
 
 if __name__ == "__main__":
