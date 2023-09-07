@@ -12,7 +12,7 @@ class Localisation():
     self.max_arena_size = [117, 120] # arena dimensions based on home arena 
     self.wheel_rad = 2.714
     self.wheel_circum = 2 * np.pi * self.wheel_rad
-    self.wheel_width = 21.5 # the distance between the left and right wheels
+    self.wheel_width = 23.5 # the distance between the left and right wheels
     
     self.front_left_dist = 200
     self.front_right_dist = 200
@@ -20,8 +20,8 @@ class Localisation():
     self.right_dist = 200
     self.left_motor_speed = 0
     self.right_motor_speed = 0
-    self.x = 0
-    self.y = 0
+    self.x = 30
+    self.y = 20
     self.th = np.pi/2
     self.turning = False
     self.send_msg = Float32MultiArray()
@@ -62,8 +62,8 @@ class Localisation():
   
   def init_localise(self):
     for _ in range(10):
-      # self.x = ((self.left_dist + self.width/2) + (self.max_arena_size[0] - self.right_dist - self.width/2))/2
-      self.x = self.max_arena_size[0] - self.right_dist - self.width/2
+      self.x = ((self.left_dist + self.width/2) + (self.max_arena_size[0] - self.right_dist - self.width/2))/2
+      # self.x = self.max_arena_size[0] - self.right_dist - self.width/2
       self.y = ((self.max_arena_size[1] - self.front_left_dist - self.length/2) + (self.max_arena_size[1] - self.front_right_dist - self.length/2))/2
       # print('x: ', self.x, '   y: ', self.y)
       rospy.sleep(0.025)
@@ -133,10 +133,10 @@ if __name__ == '__main__':
   rospy.sleep(1)
   localiser = Localisation()
   
-  try:
-    localiser.init_localise()
-  except rospy.ROSInterruptException:
-    quit()
+  # try:
+  #   localiser.init_localise()
+  # except rospy.ROSInterruptException:
+  #   quit()
   
   while not rospy.is_shutdown():
     # turning = localiser.is_turning()
