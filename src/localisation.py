@@ -78,7 +78,7 @@ class Localisation():
     self.x = self.x + ((self.left_motor_speed * self.wheel_circum * self.time - self.right_motor_speed * self.wheel_circum * self.time)/2) * np.cos(self.th)
     self.y = self.y + ((self.left_motor_speed * self.wheel_circum * self.time - self.right_motor_speed * self.wheel_circum * self.time)/2) * np.sin(self.th)
     self.prev_time = time.time()
-    print('x: ', self.x, '   y: ', self.y, '     th: ', self.th, '     time: ', self.time)
+    print('x: ', self.x, '   y: ', self.y, '     th: ', self.th, '     time: ', time.time())
     # print("5")
     # print('left speed: ', self.left_motor_speed, '    right speed: ', self.right_motor_speed, '      time: ', self.time)
     # self.th = self.clamp_angle(self.th)

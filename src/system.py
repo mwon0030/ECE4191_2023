@@ -5,12 +5,14 @@ import numpy as np
 from std_msgs.msg import Float32, Bool, Float32MultiArray
 from pi_controller import PIController
 from obstacle_detect import obstacle_detect
+import time
 
 class System():
   def __init__(self, goal_locations):
-    self.Kp = 0.05
-    # self.Ki = 0.01
-    # self.pi_controller = PIController(self.Kp, self.Ki, 1, -1)
+    self.Kp_turn = 0.5
+    self.Ki_turn = 0.1
+    self.Kt_turn = 1.5
+    self.pi_controller = PIController(self.Kp_turn, self.Ki_turn, self.Kt_turn, 1, -1)
     
     self.goal_locations = goal_locations
     self.front_left_sensor_dist = 200 
@@ -25,10 +27,9 @@ class System():
     self.flag_1 = 0
     self.waypoint_reached = False
     
-    self.Kp = 0.3
-    self.dist_threshold = 5
-    self.angle_threshold = np.pi/60
-    self.candidate_angles = [-np.pi, -np.pi/2, 0, np.pi/2, np.pi]
+    self.Kp = 0.35
+    self.dist_threshold = 3
+    self.angle_threshold = np.pi/90
     
     self.front_left_sensor = rospy.Subscriber('/distance_sensor_0', Float32, self.front_left_sensor_cb)
     self.front_right_sensor = rospy.Subscriber('/distance_sensor_1', Float32, self.front_right_sensor_cb)
@@ -66,14 +67,16 @@ class System():
     self.y = data.data[1]
     self.th = data.data[2]
 
-  def drive(self, goal_point):
+  def drive(self, goal):
     # self.set_left_motor_speed_pub.publish(self.Kp * dist_error)
     # self.set_right_motor_speed_pub.publish(-self.Kp * dist_error)
-    distance_error = self.distance_from_goal(goal_point)
-    while distance_error >= self.dist_threshold:
-      self.set_left_motor_speed_pub.publish(0.2)
-      self.set_right_motor_speed_pub.publish(-0.2)
-      distance_error = self.distance_from_goal(goal_point)
+    distance_to_drive = self.distance_from_goal(goal)
+    while distance_to_drive >= self.dist_threshold:
+      # self.set_left_motor_speed_pub.publish(0.2)
+      # self.set_right_motor_speed_pub.publish(-0.2)
+      self.set_left_motor_speed_pub.publish(self.Kp * distance_to_drive)
+      self.set_right_motor_speed_pub.publish(-self.Kp * distance_to_drive)
+      distance_to_drive = self.distance_from_goal(goal)
     
     
   def turn(self, goal_angle):
@@ -84,13 +87,15 @@ class System():
     # goal_angle = angle_error + self.th
     # print("goal_angle: ", goal_angle)
     # print('goal angle: ', goal_angle)
-    diff = abs(goal_angle - self.th)
+    angle_error = abs(goal_angle - self.th)
     # print('diff: ', diff)
     # while diff > self.angle_threshold:
-      # motor_speed_control_signal = self.pi_controller.update_angle(goal_angle, self.th)
       # motor_speed_control_signal = self.Kp * diff
-    while diff > self.angle_threshold:
-      motor_speed_control_signal = self.Kp * diff
+    curr_time = time.time()
+    while angle_error > self.angle_threshold:
+      motor_speed_control_signal = 0.1
+      # motor_speed_control_signal = self.Kp * angle_error
+      # motor_speed_control_signal = self.pi_controller.update_angle(goal_angle, self.th, curr_time)
       if goal_angle > self.th:
         self.set_left_motor_speed_pub.publish(-motor_speed_control_signal)
         self.set_right_motor_speed_pub.publish(-motor_speed_control_signal)
@@ -100,9 +105,11 @@ class System():
         self.set_left_motor_speed_pub.publish(motor_speed_control_signal)
         self.set_right_motor_speed_pub.publish(motor_speed_control_signal)
         # print('motor control signal: ', motor_speed_control_signal)
-
+      curr_time = time.time()
+      # print("time: ", curr_time)
       # angle_error = self.angle_from_goal(point)
-      diff = abs(goal_angle - self.th)
+      angle_error = abs(goal_angle - self.th)
+      print("angle error: ", angle_error, "    goal_angle: ", goal_angle, "    th: ", self.th, "   left motor: ", self.left_motor_speed, '    right motor: ', self.right_motor_speed)
     # rospy.sleep(0.07)
       # print('angle: ', self.th)
       # print('angle error: ', angle_error)
@@ -121,11 +128,12 @@ class System():
     distance_to_goal = np.hypot(x_diff, y_diff)
     return distance_to_goal
   
-  def angle_from_goal(self, goal_location):
+  # gives relative goal angle
+  def angle_to_turn(self, goal_location): 
     x_diff = float(goal_location[0]) - self.x
     y_diff = float(goal_location[1]) - self.y
-    angle_to_goal = self.clamp_angle(np.arctan2(y_diff, x_diff) - self.th)
-    return angle_to_goal
+    angle = self.clamp_angle(np.arctan2(y_diff, x_diff) - self.th)
+    return angle
   
   def clamp_angle(self, rad_angle, min_value=-np.pi, max_value=np.pi):
     if min_value > 0:
@@ -134,64 +142,22 @@ class System():
     return angle
   
   def path_planning(self):
-    for idx, point in enumerate(self.goal_locations):
-      tot_error = self.distance_from_goal(point)
-      while tot_error >= 5:
-        x_error = abs(point[0] - self.x)
-        y_error = abs(point[1] - self.y)
-        print("point: ", point)
-        print("x error: ", x_error)
-        print("y error: ", y_error)
-        
-        if x_error >= self.dist_threshold and y_error >= self.dist_threshold:
-          # print("goal locations: ", self.goal_locations)
-          # print("point: ", point)
-          print("1")
-          # angle_error = self.angle_from_goal(point)
-          # print("angle error:", angle_error)
-          # abs_angle_error = abs(angle_error)
-          # if abs_angle_error >= self.angle_threshold:
-          #   goal_angle = angle_error + self.th
-          #   print("goal angle: ", goal_angle)
-            
-          #   self.turn(goal_angle)
-          #   rospy.sleep(2)
-          # else:
-          #   self.drive(point)
-          
-        elif x_error >= self.dist_threshold:
-          angle_error = self.angle_from_goal(point)
-          print("angle error:", angle_error)
-          abs_angle_error = abs(angle_error)
-          print("2")
-          if abs_angle_error >= self.angle_threshold:
-            goal_angle = angle_error + self.th
-            print("goal angle: ", goal_angle)
-            
-            self.turn(goal_angle)
-          else:
-            self.drive(point)
-            
-        elif y_error >= self.dist_threshold:
-          angle_error = self.angle_from_goal(point)
-          abs_angle_error = abs(angle_error)
-          print("3")
-          if abs_angle_error >= self.angle_threshold:
-            goal_angle = angle_error + self.th
-            print("goal angle: ", goal_angle)
-
-            rospy.sleep(2)
-            
-          else:
-            self.drive(point)
-            
-        tot_error = self.distance_from_goal(point)
-        print("total error: ", tot_error)
-      prev_point = point
+    for waypoint in self.goal_locations:
+      # determines which relative direction to turn
+      # do turn 
+      goal_angle = self.angle_to_turn(waypoint) + self.th # Relative goal angle + global current angle = global goal angle
+      print("goal angle: ", goal_angle)
+      self.turn(goal_angle)
+      
+      print("Turning stopped")
+      
+      # drive straight
+      self.drive(waypoint)
+      
+      # Stop when waypoint is reached
       self.set_left_motor_speed_pub.publish(0)
       self.set_right_motor_speed_pub.publish(0)
       print("Goal reached!")
-      self.goal_reached = True
       rospy.sleep(10)
       
   
@@ -201,9 +167,4 @@ if __name__ == "__main__":
   goal_locations = [[30, 20], [90, 80], [30, 80]]
   robot = System(goal_locations)
   rospy.sleep(1)
-  while not rospy.is_shutdown():
-    try:
-      robot.path_planning()
-      # robot.drive()
-    except rospy.ROSInternalException:
-      break
+  robot.path_planning()

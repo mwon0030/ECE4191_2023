@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-
+from threading import Thread
 from gpiozero import PWMOutputDevice, DigitalOutputDevice
 from time import sleep
 from pi_controller import PIController
@@ -17,7 +17,7 @@ class MotorControl:
         
         self.encoder_name = encoder_name
 
-        self.pi_controller = PIController(speed_control_kp, speed_control_ki, 1, 0)
+        self.pi_controller = PIController(speed_control_kp, speed_control_ki, 0, 1, 0)
         
         self.encoder_sub = rospy.Subscriber('/' + encoder_name, Float32, self.motor_cb)
         self.set_motor_speed_sub = rospy.Subscriber('/set_' + encoder_name + '_speed', Float32, self.set_motor_speed_cb)
@@ -38,20 +38,30 @@ class MotorControl:
         self.motor_EN.off()
 
     def set_motor_speed(self):
-        current_motor_speed = self.motor_speed
-        # print('ref motor speed: ', self.ref_motor_speed, '    motor: ', self.encoder_name)
-        if self.ref_motor_speed > 0: 
-            self.motor_PWM1.value = self.pi_controller.update(self.ref_motor_speed, current_motor_speed)
-            self.motor_PWM2.value = 0
-        elif self.ref_motor_speed < 0: 
-            self.motor_PWM1.value = 0
-            self.motor_PWM2.value = self.pi_controller.update(-self.ref_motor_speed, -current_motor_speed)
-        else: 
-            self.motor_PWM1.value = 0
-            self.motor_PWM2.value = 0
+
+        for idx in range(20): 
+            current_motor_speed = self.motor_speed
+            # print('ref motor speed: ', self.ref_motor_speed, '    motor: ', self.encoder_name)
+            if self.ref_motor_speed > 0: 
+                self.motor_PWM1.value = self.ref_motor_speed
+                # self.motor_PWM1.value = self.pi_controller.update(self.ref_motor_speed, current_motor_speed)
+                # print("ref motor speed: ", self.ref_motor_speed, "current motor speed: ", current_motor_speed)
+                self.motor_PWM2.value = 0
+            elif self.ref_motor_speed < 0: 
+                self.motor_PWM1.value = 0
+                self.motor_PWM2.value = self.ref_motor_speed
+                # self.motor_PWM2.value = self.pi_controller.update(-self.ref_motor_speed, -current_motor_speed)
+            else: 
+                self.motor_PWM1.value = 0
+                self.motor_PWM2.value = 0
 
         # print(f'Current Motor speed: {current_motor_speed} rev/s, Set Motor speed: {ref_motor_speed} rev/s')
-        sleep(0.07) 
+            sleep(0.07) 
+
+def control_motor_speed(motor_control_object, speed): 
+    motor_control_object.enable_motor()
+    while True:
+        motor_control_object.set_motor_speed(speed)
 
 if __name__ == "__main__":
     rospy.init_node('motor_control')
@@ -80,7 +90,18 @@ if __name__ == "__main__":
     
     while not rospy.is_shutdown():
         try:
+
             left_motor_control.set_motor_speed()
             right_motor_control.set_motor_speed()
+
+            while True: 
+                p1 = Thread(target = control_motor_speed, args = (right_motor_control, -0.5,))
+                p2 = Thread(target = control_motor_speed, args = (left_motor_control, 0.5,))
+
+                p1.start()
+                p2.start()
+
+                p1.join()
+                p2.join()
         except rospy.ROSInterruptException:
             break
