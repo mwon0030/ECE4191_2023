@@ -23,26 +23,26 @@ class MotorControl:
         self.set_motor_speed_sub = rospy.Subscriber('/set_' + encoder_name + '_speed', Float32, self.set_motor_speed_cb)
         self.turning_sub = rospy.Subscriber('/turning', Bool, queue_size=1)
         
+        
         self.current_motor_speed = 0
         self.ref_motor_speed = 0
         
         self.turning = False
         
-        
+    def turning_cb(self, data):
+      self.turning = data.data
+    
     def motor_cb(self, data):
-        self.motor_speed = data.data
+      self.motor_speed = data.data
         
     def set_motor_speed_cb(self, data):
-        self.ref_motor_speed = data.data
-        
-    def turning_cb(self, data):
-        self.turning = data.data
- 
+      self.ref_motor_speed = data.data
+
     def enable_motor(self): 
-        self.motor_EN.on()
+      self.motor_EN.on()
         
     def disable_motor(self): 
-        self.motor_EN.off()
+      self.motor_EN.off()
 
     def set_motor_speed(self):
 
@@ -78,7 +78,7 @@ class MotorControl:
             else: 
                 self.motor_PWM1.value = 0
                 self.motor_PWM2.value = 0
-    
+                
     def set_motor_speed_turning(self):
 
         # for idx in range(5): 
@@ -119,18 +119,18 @@ class MotorControl:
 
 
 if __name__ == "__main__":
-    rospy.init_node('motor_control_1')
+    rospy.init_node('motor_control_2')
     
-    print('Initialising left motor')
+    print('Initialising right motor')
+    pin_right_motor_PWM1 = 4
+    pin_right_motor_PWM2 = 17
+    pin_right_motor_EN = 27
     
-    pin_left_motor_PWM1 = 23
-    pin_left_motor_PWM2 = 24
-    pin_left_motor_EN = 12
-    left_motor_speed_control_kp = 1
-    left_motor_speed_control_ki = 0.1
-    left_motor_name = 'left_motor'
-    left_motor_control = MotorControl(pin_left_motor_PWM1, pin_left_motor_PWM2, pin_left_motor_EN, left_motor_speed_control_kp, left_motor_speed_control_ki, left_motor_name)
-    left_motor_control.enable_motor()
+    right_motor_speed_control_kp = 1
+    right_motor_speed_control_ki = 0.1
+    right_motor_name = 'right_motor'
+    right_motor_control = MotorControl(pin_right_motor_PWM1, pin_right_motor_PWM2, pin_right_motor_EN, right_motor_speed_control_kp, right_motor_speed_control_ki, right_motor_name)
+    right_motor_control.enable_motor()
     
     
     
@@ -143,11 +143,11 @@ if __name__ == "__main__":
 
             # p1.join()
             # p2.join()
-            # turning = left_motor_control.is_turning()
+            # turning = right_motor_control.is_turning()
             # if turning:
-            #     left_motor_control.set_motor_speed_turning()
+            #     right_motor_control.set_motor_speed_turning()
             # else:
-            left_motor_control.set_motor_speed_turning()
+            right_motor_control.set_motor_speed_turning()
                 
         except rospy.ROSInterruptException:
             break

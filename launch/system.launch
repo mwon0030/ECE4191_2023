@@ -2,6 +2,9 @@
     <node pkg="ece4191" name="motor_control"
     type="motor_control.py" output="screen" respawn="true" />
 
+    <node pkg="ece4191" name="motor_control_2"
+    type="motor_control_2.py" output="screen" respawn="true" />
+
     <node pkg="ece4191" name="encoders"
     type="encoder.py" output="screen" respawn="true" />
 

@@ -9,10 +9,10 @@ class Localisation():
   def __init__(self):
     self.length = 25 # in cm
     self.width = 21
-    self.max_arena_size = [117, 120] # arena dimensions based on home arena 
+    self.max_arena_size = [120, 120] # arena dimensions based on home arena 
     self.wheel_rad = 2.715
     self.wheel_circum = 2 * np.pi * self.wheel_rad
-    self.wheel_width = 21.6 # the distance between the left and right wheels
+    self.wheel_width = 21.3 # the distance between the left and right wheels
     self.calibration_factor = 1
     
     self.front_left_dist = 200
@@ -23,7 +23,7 @@ class Localisation():
     self.right_motor_speed = 0
     self.x = 30
     self.y = 20
-    self.th = np.pi/2
+    self.th = np.pi/4
     self.turning = False
     self.send_msg = Float32MultiArray()
     
@@ -79,7 +79,7 @@ class Localisation():
     self.x = self.x + ((self.left_motor_speed * self.wheel_circum * self.time - self.right_motor_speed * self.wheel_circum * self.time)/2) * self.calibration_factor * np.cos(self.th)
     self.y = self.y + ((self.left_motor_speed * self.wheel_circum * self.time - self.right_motor_speed * self.wheel_circum * self.time)/2) *  self.calibration_factor * np.sin(self.th)
     self.prev_time = time.time()
-    print('x: ', self.x, '   y: ', self.y, '     th: ', self.th, '     time: ', time.time())
+    print('x: ', self.x, '   y: ', self.y, '     th: ', self.th, '     time: ', self.time)
     # print("5")
     # print('left speed: ', self.left_motor_speed, '    right speed: ', self.right_motor_speed, '      time: ', self.time)
     # self.th = self.clamp_angle(self.th)
@@ -93,7 +93,7 @@ class Localisation():
     self.x = self.x + ((self.left_motor_speed * self.wheel_circum * self.time - self.right_motor_speed * self.wheel_circum * self.time)/2) * np.cos(self.th)
     self.y = self.y + ((self.left_motor_speed * self.wheel_circum * self.time - self.right_motor_speed * self.wheel_circum * self.time)/2) * np.sin(self.th)
     self.prev_time = time.time()
-    print('x: ', self.x, '   y: ', self.y, '     th: ', self.th, '     time: ', time.time())
+    print('x: ', self.x, '   y: ', self.y, '     th: ', self.th, '     time: ', self.time)
     # print("5")
     # print('left speed: ', self.left_motor_speed, '    right speed: ', self.right_motor_speed, '      time: ', self.time)
     # self.th = self.clamp_angle(self.th)
@@ -143,6 +143,23 @@ class Localisation():
     angle = (rad_angle + max_value) % (2 * np.pi) + min_value
     return angle
 
+  def localise(self):
+    check_sensor_readings_legit = False
+    if self.th % np.pi/2 <= 0.05: 
+      print('Hi')
+      if (self.left_dist + self.width + self.right_dist - self.max_arena_size[1]) < 5: 
+        print('Hi2')
+        if not self.obstacle_detect: # front sensors 
+          check_sensor_readings_legit = True 
+          
+    if check_sensor_readings_legit: 
+        print('using distance sensor coords')
+        self.localise_sensor()
+    elif self.turning: 
+      self.localise_motor_turn()
+    else: 
+      self.localise_motor()
+
 if __name__ == '__main__':
   rospy.init_node('localisation')
   rospy.sleep(1)
@@ -153,11 +170,15 @@ if __name__ == '__main__':
   # except rospy.ROSInterruptException:
   #   quit()
   
+  # while not rospy.is_shutdown():
+  #   turning = localiser.is_turning()
+  #   # print('\nTurning: ', turning)
+  #   if turning:
+  #     localiser.localise_motor_turn()
+  #   elif not turning:
+  #     localiser.localise_motor()
+  #   # localiser.localise_motor()  
+
   while not rospy.is_shutdown():
-    turning = localiser.is_turning()
-    # print('\nTurning: ', turning)
-    if turning:
-      localiser.localise_motor_turn()
-    elif not turning:
-      localiser.localise_motor()
-    # localiser.localise_motor()  
+    # localiser.localise()
+    localiser.localise_motor() 
