@@ -45,74 +45,19 @@ class MotorControl:
       self.motor_EN.off()
 
     def set_motor_speed(self):
+        if self.ref_motor_speed > 0: 
+            self.motor_PWM1.value = self.ref_motor_speed
+            self.motor_PWM2.value = 0
+            # print("ref motor speed: ", self.ref_motor_speed, "current motor speed: ", self.motor_speed)
 
-        # for idx in range(5): 
-        #     # print('ref motor speed: ', self.ref_motor_speed, '    motor: ', self.encoder_name)
-        #     if self.ref_motor_speed > 0: 
-        #         self.motor_PWM1.value = self.pi_controller.update(self.ref_motor_speed, self.current_motor_speed)
-        #         # print("ref motor speed: ", self.ref_motor_speed, "current motor speed: ", current_motor_speed)
-        #         self.motor_PWM2.value = 0
-        #     elif self.ref_motor_speed < 0: 
-        #         self.motor_PWM1.value = 0
-        #         # self.motor_PWM2.value = self.ref_motor_speed
-        #         self.motor_PWM2.value = self.pi_controller.update(-self.ref_motor_speed, -self.current_motor_speed)
-        #     else: 
-        #         self.motor_PWM1.value = 0
-        #         self.motor_PWM2.value = 0
-
-        # print(f'Current Motor speed: {current_motor_speed} rev/s, Set Motor speed: {ref_motor_speed} rev/s'
-
-                 # print('ref motor speed: ', self.ref_motor_speed, '    motor: ', self.encoder_name)
-            self.ref_motor_speed = 0.2 if self.ref_motor_speed > 0.2 else self.ref_motor_speed
-            if self.ref_motor_speed > 0: 
-                # self.motor_PWM1.value = self.ref_motor_speed
-                self.motor_PWM1.value = self.pi_controller.update(self.ref_motor_speed, self.current_motor_speed)
-                # print("ref motor speed: ", self.ref_motor_speed, "current motor speed: ", self.motor_speed)
-                self.motor_PWM2.value = 0
-            elif self.ref_motor_speed < 0: 
-                self.motor_PWM1.value = 0
-                # self.motor_PWM2.value = -self.ref_motor_speed
-                self.motor_PWM2.value = self.pi_controller.update(-self.ref_motor_speed, -self.current_motor_speed)
-                # print("ref motor speed: ", self.ref_motor_speed, "current motor speed: ", self.motor_speed)
-                
-            else: 
-                self.motor_PWM1.value = 0
-                self.motor_PWM2.value = 0
-                
-    def set_motor_speed_turning(self):
-
-        # for idx in range(5): 
-        #     # print('ref motor speed: ', self.ref_motor_speed, '    motor: ', self.encoder_name)
-        #     if self.ref_motor_speed > 0: 
-        #         self.motor_PWM1.value = self.pi_controller.update(self.ref_motor_speed, self.current_motor_speed)
-        #         # print("ref motor speed: ", self.ref_motor_speed, "current motor speed: ", current_motor_speed)
-        #         self.motor_PWM2.value = 0
-        #     elif self.ref_motor_speed < 0: 
-        #         self.motor_PWM1.value = 0
-        #         # self.motor_PWM2.value = self.ref_motor_speed
-        #         self.motor_PWM2.value = self.pi_controller.update(-self.ref_motor_speed, -self.current_motor_speed)
-        #     else: 
-        #         self.motor_PWM1.value = 0
-        #         self.motor_PWM2.value = 0
-
-        # print(f'Current Motor speed: {current_motor_speed} rev/s, Set Motor speed: {ref_motor_speed} rev/s'
-
-                 # print('ref motor speed: ', self.ref_motor_speed, '    motor: ', self.encoder_name)
-            self.ref_motor_speed = 0.5 if self.ref_motor_speed > 0.5 else self.ref_motor_speed
-            if self.ref_motor_speed > 0: 
-                self.motor_PWM1.value = self.ref_motor_speed
-                # self.motor_PWM1.value = self.pi_controller.update(self.ref_motor_speed, self.current_motor_speed)
-                # print("ref motor speed: ", self.ref_motor_speed, "current motor speed: ", self.motor_speed)
-                self.motor_PWM2.value = 0
-            elif self.ref_motor_speed < 0: 
-                self.motor_PWM1.value = 0
-                self.motor_PWM2.value = -self.ref_motor_speed
-                # self.motor_PWM2.value = self.pi_controller.update(-self.ref_motor_speed, -self.current_motor_speed)
-                # print("ref motor speed: ", self.ref_motor_speed, "current motor speed: ", self.motor_speed)
-                
-            else: 
-                self.motor_PWM1.value = 0
-                self.motor_PWM2.value = 0
+        elif self.ref_motor_speed < 0: 
+            self.motor_PWM1.value = 0
+            self.motor_PWM2.value = -self.ref_motor_speed
+            # print("ref motor speed: ", self.ref_motor_speed, "current motor speed: ", self.motor_speed)
+            
+        else: 
+            self.motor_PWM1.value = 0
+            self.motor_PWM2.value = 0
                 
     def is_turning(self):
         return self.turning
@@ -136,18 +81,7 @@ if __name__ == "__main__":
     
     while not rospy.is_shutdown():
         try:
-            # p1 = Thread(target = left_motor_control.set_motor_speed)
-            # p2 = Thread(target = right_motor_control.set_motor_speed)
-            # p1.start()
-            # p2.start()
-
-            # p1.join()
-            # p2.join()
-            # turning = right_motor_control.is_turning()
-            # if turning:
-            #     right_motor_control.set_motor_speed_turning()
-            # else:
-            right_motor_control.set_motor_speed_turning()
+            right_motor_control.set_motor_speed()
                 
         except rospy.ROSInterruptException:
             break
