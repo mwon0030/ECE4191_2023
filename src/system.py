@@ -6,9 +6,9 @@ import numpy as np
 from std_msgs.msg import Float32, Bool, Float32MultiArray
 
 class System():
-  def __init__(self, goal_locations):
+  def __init__(self, colour_to_goal_location_map):
 
-    self.goal_locations = goal_locations
+    self.colour_to_goal_location_map = colour_to_goal_location_map
     self.front_left_sensor_dist = 200 
     self.front_right_sensor_dist = 200
     self.left_sensor_dist = 200
@@ -41,6 +41,9 @@ class System():
     self.set_left_motor_speed_pub = rospy.Publisher('set_left_motor_speed', Float32, queue_size=1)
     self.set_right_motor_speed_pub = rospy.Publisher('set_right_motor_speed', Float32, queue_size=1)
 
+    self.colour_sensor_trigger_pub = rospy.Publisher('colour_sensor_trigger', Bool, queue_size=1)
+    self.package_colour_detected_sub = rospy.Subscriber('/package_colour_detected_sub', Float32, self.package_colour_detected_cb)
+
 
   def front_left_sensor_cb(self, data):
     self.front_left_sensor_dist = data.data
@@ -67,6 +70,9 @@ class System():
     
   def obstacle_detect_cb(self, data):
     self.obstacle_detected = data.data
+
+  def package_colour_detected_cb(self, data):
+    self.package_colour = data.data
 
   def drive_to_waypoint(self, goal):
     distance_to_drive = self.distance_from_goal(goal)
@@ -141,27 +147,34 @@ class System():
     angle = (rad_angle + max_value) % (2 * np.pi) + min_value
     return angle
   
+  def determine_goal_location(self): 
+    self.colour_sensor_trigger_pub(True) 
+
+    return self.colour_to_goal_location_map[self.package_colour]
+
+  
   def path_planning(self):
-    for waypoint in self.goal_locations:
-      # determines which relative direction to turn
-      # do turn 
-      goal_angle = self.angle_to_turn(waypoint) + self.th # Relative goal angle + global current angle = global goal angle
-      print("goal angle: ", goal_angle)
-      self.turn(goal_angle)
-      
-      print("Turning stopped")
-      
-      # drive straight
-      self.drive_to_waypoint(waypoint)
-      
-      # Stop when waypoint is reached
-      self.set_left_motor_speed_pub.publish(0)
-      self.set_right_motor_speed_pub.publish(0) 
+    
+    goal_location = self.determine_goal_location()
+    # determines which relative direction to turn
+    # do turn 
+    goal_angle = self.angle_to_turn(goal_location) + self.th # Relative goal angle + global current angle = global goal angle
+    print("goal angle: ", goal_angle)
+    self.turn(goal_angle)
+    
+    print("Turning stopped")
+    
+    # drive straight
+    self.drive_to_waypoint(goal_location)
+    
+    # Stop when waypoint is reached
+    self.set_left_motor_speed_pub.publish(0)
+    self.set_right_motor_speed_pub.publish(0) 
 
-      print("Goal reached!")
+    print("Goal reached!")
 
-      ## commence delivery
-      rospy.sleep(10)
+    ## commence delivery
+    rospy.sleep(10)
   
   def obstacle_avoidance(self, goal):
     # obstacle detection threshold 
@@ -191,13 +204,22 @@ class System():
         # turn in the direction which avoids obstacle (still want to be travelling forward to avoid)
         if left_score > right_score:
           print('turning right to avoid obstacle') 
-          left_motor_speed = 0.1
+          left_motor_speed = 0.2
           right_motor_speed = 0.4*left_score
 
-        else: 
+        elif left_score < right_score: 
           print('turning left to avoid obstacle')
           left_motor_speed = 0.4*right_score
-          right_motor_speed = 0.1
+          right_motor_speed = 0.2
+
+        # when left score and right score are equal 
+        else: 
+          left_motor_speed = 0.5
+          right_motor_speed = -0.5
+          if self.x > self.max_arena_size/2: 
+            self.turn(np.pi)
+          else: 
+            self.turn(0)
 
         self.drive(left_motor_speed, -right_motor_speed)
       else:
@@ -217,8 +239,8 @@ class System():
 
 if __name__ == "__main__":
   rospy.init_node('system')
-  goal_locations = [[90, 80], [25, 80]] 
-  robot = System(goal_locations)
+  colour_to_goal_location_map = {'red': [90, 80], 'green': [25, 80]}
+  robot = System(colour_to_goal_location_map)
   rospy.sleep(1)
   
   robot.path_planning()
