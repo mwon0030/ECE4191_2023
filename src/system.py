@@ -75,6 +75,13 @@ class System():
     self.package_colour = data.data
 
   def drive_to_waypoint(self, goal):
+
+    goal_angle = self.angle_to_turn(goal) + self.th # Relative goal angle + global current angle = global goal angle
+    print("goal angle: ", goal_angle)
+    self.turn(goal_angle)
+    
+    print("Turning stopped")
+
     distance_to_drive = self.distance_from_goal(goal)
     
     while distance_to_drive >= self.dist_threshold:
@@ -156,14 +163,7 @@ class System():
   def path_planning(self):
     
     goal_location = self.determine_goal_location()
-    # determines which relative direction to turn
-    # do turn 
-    goal_angle = self.angle_to_turn(goal_location) + self.th # Relative goal angle + global current angle = global goal angle
-    print("goal angle: ", goal_angle)
-    self.turn(goal_angle)
-    
-    print("Turning stopped")
-    
+
     # drive straight
     self.drive_to_waypoint(goal_location)
     
@@ -171,10 +171,14 @@ class System():
     self.set_left_motor_speed_pub.publish(0)
     self.set_right_motor_speed_pub.publish(0) 
 
-    print("Goal reached!")
+    print("Goal reached!") 
 
     ## commence delivery
     rospy.sleep(10)
+
+    print("Driving home")
+
+    self.drive_to_waypoint([20,30])
   
   def obstacle_avoidance(self, goal):
     # obstacle detection threshold 
