@@ -1,14 +1,16 @@
 #! /usr/bin/env python
 
 from math import dist
+from tracemalloc import start
 import rospy
 import numpy as np
 from std_msgs.msg import Float32, Bool, Float32MultiArray, String
 
 class System():
-  def __init__(self, colour_to_goal_location_map):
+  def __init__(self, colour_to_goal_location_map, start_location):
 
     self.colour_to_goal_location_map = colour_to_goal_location_map
+    self.start_location = start_location
     self.front_left_sensor_dist = 200 
     self.front_right_sensor_dist = 200
     self.left_sensor_dist = 200
@@ -43,6 +45,7 @@ class System():
 
     self.colour_sensor_trigger_pub = rospy.Publisher('colour_sensor_trigger', Bool, queue_size=1)
     self.package_colour_detected_sub = rospy.Subscriber('/package_colour', String, self.package_colour_detected_cb)
+ 
 
 
   def front_left_sensor_cb(self, data):
@@ -80,8 +83,6 @@ class System():
     print("goal angle: ", goal_angle)
     self.turn(goal_angle)
     
-    print("Turning stopped")
-
     distance_to_drive = self.distance_from_goal(goal)
     
     while distance_to_drive >= self.dist_threshold:
@@ -124,14 +125,13 @@ class System():
       self.turning_pub.publish(self.is_turning)
     
     while self.left_motor_speed != 0.0 and self.right_motor_speed != 0.0:
-      self.set_left_motor_speed_pub.publish(0)
-      self.set_right_motor_speed_pub.publish(0)
+      self.drive(0,0)
     
     print("Turn Complete")
     rospy.sleep(0.5)
         
-    self.set_left_motor_speed_pub.publish(0)
-    self.set_right_motor_speed_pub.publish(0)
+    # self.set_left_motor_speed_pub.publish(0)
+    # self.set_right_motor_speed_pub.publish(0)
     self.is_turning = False
     self.turning_pub.publish(self.is_turning)
 
@@ -170,7 +170,6 @@ class System():
     
     goal_location = self.determine_goal_location()
 
-    # drive straight
     self.drive_to_waypoint(goal_location)
     
     # Stop when waypoint is reached
@@ -184,7 +183,7 @@ class System():
 
     print("Driving home")
 
-    self.drive_to_waypoint([20,30])
+    self.drive_to_waypoint(self.start_location)
 
   
   def obstacle_avoidance(self, goal):
@@ -251,7 +250,8 @@ class System():
 if __name__ == "__main__":
   rospy.init_node('system')
   colour_to_goal_location_map = {'red': [90, 80], 'green': [25, 80]}
-  robot = System(colour_to_goal_location_map)
+  start_location = [20,30]
+  robot = System(colour_to_goal_location_map, start_location)
   rospy.sleep(1)
   
   robot.path_planning()
