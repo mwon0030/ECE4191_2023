@@ -3,7 +3,7 @@
 from math import dist
 import rospy
 import numpy as np
-from std_msgs.msg import Float32, Bool, Float32MultiArray
+from std_msgs.msg import Float32, Bool, Float32MultiArray, String
 
 class System():
   def __init__(self, colour_to_goal_location_map):
@@ -42,7 +42,7 @@ class System():
     self.set_right_motor_speed_pub = rospy.Publisher('set_right_motor_speed', Float32, queue_size=1)
 
     self.colour_sensor_trigger_pub = rospy.Publisher('colour_sensor_trigger', Bool, queue_size=1)
-    self.package_colour_detected_sub = rospy.Subscriber('/package_colour_detected_sub', Float32, self.package_colour_detected_cb)
+    self.package_colour_detected_sub = rospy.Subscriber('/package_colour', String, self.package_colour_detected_cb)
 
 
   def front_left_sensor_cb(self, data):
@@ -156,6 +156,12 @@ class System():
   
   def determine_goal_location(self): 
     self.colour_sensor_trigger_pub(True) 
+    colour_detected = False
+
+    # waiting until new colour is detected 
+    while not colour_detected: 
+      if self.package_colour: 
+        colour_detected = True 
 
     return self.colour_to_goal_location_map[self.package_colour]
 
@@ -179,6 +185,7 @@ class System():
     print("Driving home")
 
     self.drive_to_waypoint([20,30])
+
   
   def obstacle_avoidance(self, goal):
     # obstacle detection threshold 
