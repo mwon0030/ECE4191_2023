@@ -5,6 +5,7 @@ from tracemalloc import start
 import rospy
 import numpy as np
 from std_msgs.msg import Float32, Bool, Float32MultiArray, String
+from gpiozero import Servo
 
 class System():
   def __init__(self, colour_to_goal_location_map, start_location):
@@ -46,7 +47,7 @@ class System():
     self.colour_sensor_trigger_pub = rospy.Publisher('colour_sensor_trigger', Bool, queue_size=1)
     self.package_colour_detected_sub = rospy.Subscriber('/package_colour', String, self.package_colour_detected_cb)
  
-
+    self.state_pub = rospy.Publisher('state', Float32MultiArray, queue_size=1)
 
   def front_left_sensor_cb(self, data):
     self.front_left_sensor_dist = data.data
@@ -99,9 +100,9 @@ class System():
     while self.left_motor_speed != 0.0 and self.right_motor_speed != 0.0:
       self.drive(0,0)
 
-  def drive_straight(self, motor_signal = 0.4):
-      self.set_left_motor_speed_pub.publish(motor_signal)
-      self.set_right_motor_speed_pub.publish(-motor_signal)
+  def drive_straight(self, motor_speed = 0.4):
+      self.set_left_motor_speed_pub.publish(motor_speed)
+      self.set_right_motor_speed_pub.publish(-motor_speed)
 
   def drive(self, left_motor_speed, right_motor_speed):
       self.set_left_motor_speed_pub.publish(left_motor_speed)
@@ -164,6 +165,45 @@ class System():
         colour_detected = True 
 
     return self.colour_to_goal_location_map[self.package_colour]
+  
+  def deliver_package(self): 
+
+    while self.front_left_sensor_dist > 5 or self.front_right_sensor_dist  > 5: 
+      self.drive_straight()
+
+    # do servo thing 
+
+    # drive backwards 
+    while self.front_left_sensor_dist < 10 or self.front_right_sensor_dist < 10: 
+      self.drive_straight(motor_speed = -0.4)
+
+  def localise_dist_sensor(self): 
+    # need to align directly to wall 
+    while abs(self.front_left_sensor_dist - self.front_right_sensor_dist) < 5: 
+      if self.front_right_sensor_dist > self.front_right_sensor_dist: 
+        # turn right 
+        angle_increments_to_turn = -np.pi/8
+      else: 
+        # turn left 
+        angle_increments_to_turn = np.pi/8
+
+      self.turn(angle_increments_to_turn + self.th)
+
+    y = (self.front_right_sensor_dist + self.front_right_sensor_dist)/2
+    
+
+    # turn right 
+    self.turn(0)
+    x = (self.front_right_sensor_dist + self.front_right_sensor_dist)/2
+
+    self.turn(-np.pi/2)
+    th = -np.pi/2
+
+    send_msg = Float32MultiArray()
+    self.send_msg.data = [x, y, th]
+    self.state_pub.publish(send_msg)
+
+
 
   
   def path_planning(self):
@@ -178,13 +218,19 @@ class System():
 
     print("Goal reached!") 
 
+    # get within 5 cm of thing 
+    self.deliver_package()
+
     ## commence delivery
+
     rospy.sleep(10)
 
     print("Driving home")
 
     self.drive_to_waypoint(self.start_location)
+    # perhaps relocalise with distance sensors after this 
 
+    self.localise_dist_sensor()
   
   def obstacle_avoidance(self, goal):
     # obstacle detection threshold 
